@@ -1,124 +1,148 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+
+interface User {
+  id: string
+  username: string
+  avatar: string
+}
 
 interface Message {
   id: string
-  agent: string
+  user: string
   content: string
   timestamp: Date
+  channel: string
 }
 
-const agents = [
-  { id: 'claude', name: 'Claude', emoji: '🧠', color: 'bg-orange-500' },
-  { id: 'gpt', name: 'GPT', emoji: '🤖', color: 'bg-green-500' },
-  { id: 'gemini', name: 'Gemini', emoji: '✨', color: 'bg-blue-500' },
-  { id: 'llama', name: 'Llama', emoji: '🦙', color: 'bg-purple-500' },
-]
+const avatars = ['🐱', '🐶', '🦊', '🐼', '🐨', '🦁', '🐯', '🐸']
 
 export default function AgentChat() {
-  const [messages, setMessages] = useState<Message[]>([
-    { id: '1', agent: 'claude', content: 'Hello! I am Claude, ready to help!', timestamp: new Date() }
-  ])
-  const [selectedAgent, setSelectedAgent] = useState('claude')
+  const [user, setUser] = useState<User | null>(null)
+  const [showRegister, setShowRegister] = useState(false)
+  const [username, setUsername] = useState('')
+  const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
+  const [channel, setChannel] = useState('general')
+
+  const channels = ['general', 'dev', 'random', 'agents']
+
+  useEffect(() => {
+    const saved = localStorage.getItem('openclaw_user')
+    if (saved) setUser(JSON.parse(saved))
+  }, [])
+
+  const register = () => {
+    if (!username.trim()) return
+    const newUser = {
+      id: Date.now().toString(),
+      username,
+      avatar: avatars[Math.floor(Math.random() * avatars.length)]
+    }
+    localStorage.setItem('openclaw_user', JSON.stringify(newUser))
+    setUser(newUser)
+    setShowRegister(false)
+  }
+
+  const login = () => {
+    setShowRegister(true)
+  }
+
+  const logout = () => {
+    localStorage.removeItem('openclaw_user')
+    setUser(null)
+  }
 
   const sendMessage = () => {
-    if (!input.trim()) return
+    if (!input.trim() || !user) return
     
     const newMsg: Message = {
       id: Date.now().toString(),
-      agent: selectedAgent,
+      user: user.username,
       content: input,
-      timestamp: new Date()
+      timestamp: new Date(),
+      channel
     }
     setMessages([...messages, newMsg])
     setInput('')
-    
-    // Simulate response
-    setTimeout(() => {
-      const responses = [
-        'I understand! Let me help with that.',
-        'Good point! I\'ll work on that.',
-        'Acknowledged! Processing your request.',
-        'Great question! Here\'s what I think...',
-      ]
-      const response: Message = {
-        id: (Date.now() + 1).toString(),
-        agent: agents[Math.floor(Math.random() * agents.length)].id,
-        content: responses[Math.floor(Math.random() * responses.length)],
-        timestamp: new Date()
-      }
-      setMessages(prev => [...prev, response])
-    }, 1000)
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="bg-gray-800 p-8 rounded-xl text-center">
+          <h1 className="text-3xl mb-4">🤝 OpenClaw Chat</h1>
+          {showRegister ? (
+            <div className="space-y-4">
+              <input
+                type="text"
+                placeholder="Username"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                className="w-full bg-gray-700 rounded px-4 py-2"
+              />
+              <button onClick={register} className="w-full bg-blue-600 py-2 rounded">
+                Register
+              </button>
+            </div>
+          ) : (
+            <button onClick={login} className="bg-blue-600 px-8 py-2 rounded">
+              Login / Register
+            </button>
+          )}
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       {/* Header */}
-      <header className="bg-gray-800 p-4 flex items-center justify-between">
-        <h1 className="text-xl font-bold">🤝 Agent Chat</h1>
-        <div className="flex gap-2">
-          {agents.map(agent => (
-            <button
-              key={agent.id}
-              onClick={() => setSelectedAgent(agent.id)}
-              className={`px-3 py-1 rounded-full ${agent.color} ${selectedAgent === agent.id ? 'ring-2 ring-white' : ''}`}
-            >
-              {agent.emoji} {agent.name}
-            </button>
-          ))}
+      <header className="bg-gray-800 p-3 flex items-center justify-between">
+        <h1 className="font-bold">🤝 OpenClaw Chat</h1>
+        <div className="flex items-center gap-4">
+          <span>{user.avatar} {user.username}</span>
+          <button onClick={logout} className="text-sm text-gray-400">Logout</button>
         </div>
       </header>
 
-      <div className="flex h-[calc(100vh-64px)]">
-        {/* Agents Panel */}
-        <aside className="w-64 bg-gray-800 p-4">
-          <h2 className="font-bold mb-4">Agents</h2>
-          {agents.map(agent => (
-            <div key={agent.id} className="flex items-center gap-2 p-2 rounded hover:bg-gray-700">
-              <span className={`w-2 h-2 rounded-full ${agent.color}`} />
-              <span>{agent.emoji}</span>
-              <span>{agent.name}</span>
-              <span className="ml-auto text-xs text-green-400">●</span>
-            </div>
+      <div className="flex h-[calc(100vh-56px)]">
+        {/* Channels */}
+        <aside className="w-48 bg-gray-800 p-3">
+          <h3 className="text-sm text-gray-400 mb-2">Channels</h3>
+          {channels.map(ch => (
+            <button
+              key={ch}
+              onClick={() => setChannel(ch)}
+              className={`block w-full text-left p-2 rounded ${channel === ch ? 'bg-blue-600' : 'hover:bg-gray-700'}`}
+            >
+              # {ch}
+            </button>
           ))}
         </aside>
 
-        {/* Chat Area */}
+        {/* Chat */}
         <main className="flex-1 flex flex-col">
-          <div className="flex-1 p-4 overflow-y-auto space-y-4">
-            {messages.map(msg => {
-              const agent = agents.find(a => a.id === msg.agent)
-              return (
-                <div key={msg.id} className={`flex ${msg.agent === selectedAgent ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-md p-3 rounded-lg ${msg.agent === selectedAgent ? 'bg-blue-600' : 'bg-gray-700'}`}>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span>{agent?.emoji}</span>
-                      <span className="text-xs opacity-70">{agent?.name}</span>
-                    </div>
-                    <p>{msg.content}</p>
-                  </div>
-                </div>
-              )
-            })}
+          <div className="flex-1 p-4 overflow-y-auto space-y-2">
+            <p className="text-gray-500 text-sm">Welcome to #{channel}!</p>
+            {messages.filter(m => m.channel === channel).map(msg => (
+              <div key={msg.id} className="flex gap-2">
+                <span className="text-gray-400">[{msg.timestamp.toLocaleTimeString()}]</span>
+                <span className="font-bold">{msg.user}:</span>
+                <span>{msg.content}</span>
+              </div>
+            ))}
           </div>
-
-          {/* Input */}
-          <div className="p-4 bg-gray-800">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && sendMessage()}
-                placeholder="Type a message..."
-                className="flex-1 bg-gray-700 rounded-lg px-4 py-2"
-              />
-              <button onClick={sendMessage} className="bg-blue-600 px-6 py-2 rounded-lg">
-                Send
-              </button>
-            </div>
+          <div className="p-3 bg-gray-800">
+            <input
+              type="text"
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && sendMessage()}
+              placeholder={`Message #${channel}`}
+              className="w-full bg-gray-700 rounded px-4 py-2"
+            />
           </div>
         </main>
       </div>
