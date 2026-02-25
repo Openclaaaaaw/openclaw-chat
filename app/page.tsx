@@ -17,8 +17,12 @@ interface Message {
 }
 
 const avatars = ['🐱', '🐶', '🦊', '🐼', '🐨', '🦁', '🐯', '🐸']
+const SITE_PASSWORD = 'openclaw2026'
 
 export default function AgentChat() {
+  const [authenticated, setAuthenticated] = useState(false)
+  const [password, setPassword] = useState('')
+  const [passwordError, setPasswordError] = useState(false)
   const [user, setUser] = useState<User | null>(null)
   const [showRegister, setShowRegister] = useState(false)
   const [username, setUsername] = useState('')
@@ -29,9 +33,21 @@ export default function AgentChat() {
   const channels = ['general', 'dev', 'random', 'agents']
 
   useEffect(() => {
+    const authed = localStorage.getItem('openclaw_auth')
+    if (authed === 'true') setAuthenticated(true)
     const saved = localStorage.getItem('openclaw_user')
     if (saved) setUser(JSON.parse(saved))
   }, [])
+
+  const handlePassword = () => {
+    if (password === SITE_PASSWORD) {
+      localStorage.setItem('openclaw_auth', 'true')
+      setAuthenticated(true)
+      setPasswordError(false)
+    } else {
+      setPasswordError(true)
+    }
+  }
 
   const register = () => {
     if (!username.trim()) return
@@ -45,18 +61,17 @@ export default function AgentChat() {
     setShowRegister(false)
   }
 
-  const login = () => {
-    setShowRegister(true)
-  }
+  const login = () => setShowRegister(true)
 
   const logout = () => {
     localStorage.removeItem('openclaw_user')
+    localStorage.removeItem('openclaw_auth')
     setUser(null)
+    setAuthenticated(false)
   }
 
   const sendMessage = () => {
     if (!input.trim() || !user) return
-    
     const newMsg: Message = {
       id: Date.now().toString(),
       user: user.username,
@@ -68,10 +83,36 @@ export default function AgentChat() {
     setInput('')
   }
 
+  if (!authenticated) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center text-white">
+        <div className="bg-gray-800 p-8 rounded-xl text-center w-80">
+          <h1 className="text-3xl mb-2">🔒 OpenClaw Chat</h1>
+          <p className="text-gray-400 text-sm mb-6">Enter password to continue</p>
+          <div className="space-y-4">
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={e => { setPassword(e.target.value); setPasswordError(false) }}
+              onKeyDown={e => e.key === 'Enter' && handlePassword()}
+              className="w-full bg-gray-700 rounded px-4 py-2"
+              autoFocus
+            />
+            {passwordError && <p className="text-red-400 text-sm">Wrong password</p>}
+            <button onClick={handlePassword} className="w-full bg-blue-600 py-2 rounded hover:bg-blue-500 transition">
+              Enter
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (!user) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="bg-gray-800 p-8 rounded-xl text-center">
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center text-white">
+        <div className="bg-gray-800 p-8 rounded-xl text-center w-80">
           <h1 className="text-3xl mb-4">🤝 OpenClaw Chat</h1>
           {showRegister ? (
             <div className="space-y-4">
@@ -80,14 +121,16 @@ export default function AgentChat() {
                 placeholder="Username"
                 value={username}
                 onChange={e => setUsername(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && register()}
                 className="w-full bg-gray-700 rounded px-4 py-2"
+                autoFocus
               />
-              <button onClick={register} className="w-full bg-blue-600 py-2 rounded">
+              <button onClick={register} className="w-full bg-blue-600 py-2 rounded hover:bg-blue-500 transition">
                 Register
               </button>
             </div>
           ) : (
-            <button onClick={login} className="bg-blue-600 px-8 py-2 rounded">
+            <button onClick={login} className="bg-blue-600 px-8 py-2 rounded hover:bg-blue-500 transition">
               Login / Register
             </button>
           )}
@@ -98,7 +141,6 @@ export default function AgentChat() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
-      {/* Header */}
       <header className="bg-gray-800 p-3 flex items-center justify-between">
         <h1 className="font-bold">🤝 OpenClaw Chat</h1>
         <div className="flex items-center gap-4">
@@ -106,9 +148,7 @@ export default function AgentChat() {
           <button onClick={logout} className="text-sm text-gray-400">Logout</button>
         </div>
       </header>
-
       <div className="flex h-[calc(100vh-56px)]">
-        {/* Channels */}
         <aside className="w-48 bg-gray-800 p-3">
           <h3 className="text-sm text-gray-400 mb-2">Channels</h3>
           {channels.map(ch => (
@@ -121,8 +161,6 @@ export default function AgentChat() {
             </button>
           ))}
         </aside>
-
-        {/* Chat */}
         <main className="flex-1 flex flex-col">
           <div className="flex-1 p-4 overflow-y-auto space-y-2">
             <p className="text-gray-500 text-sm">Welcome to #{channel}!</p>
